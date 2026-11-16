@@ -1,0 +1,591 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0c0a0c"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Журнал"><style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style></head><body>
+<title>Журнал записи салона</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Слева меню (на телефоне снизу). Главная: гайд → 4 плитки цифр → расписание сегодня + напоминания на завтра + неделя. */
+:root{
+  --bg:#0c0a0c; --panel:#151116; --card:#1c171d; --card2:#251e26; --fg:#f6eef4; --muted:#9d8c98; --line:#2e2530;
+  --pink:#ff4f9a; --violet:#a23bff; --pink-soft:rgba(255,79,154,.14); --on:#ffffff;
+  --ok:#3fd294; --warn:#f5bd4f; --bad:#ff6b6b;
+  --grad:linear-gradient(135deg,#ff4f9a 0%,#b03cff 100%);
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset;
+  --font:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif; color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#f6f3f7; --panel:#ffffff; --card:#ffffff; --card2:#f7f0f6; --fg:#1d1520; --muted:#857784; --line:#ece2ea;
+  --pink:#e2287f; --violet:#8f2ee6; --pink-soft:#fde6f1; --on:#ffffff;
+  --ok:#1c9a62; --warn:#b67a08; --bad:#d63b3b;
+  --grad:linear-gradient(135deg,#ec3a8c 0%,#9b33f0 100%);
+  --shadow:0 1px 2px rgba(60,20,50,.05),0 6px 20px rgba(60,20,50,.05); color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* каркас */
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;padding:22px 14px;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;padding:4px 10px 18px}
+.logo i{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#fff;font-style:normal;font-size:16px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{display:flex;align-items:center;gap:12px;border:0;background:transparent;padding:11px 12px;border-radius:12px;font-weight:600;color:var(--muted);text-align:left;min-height:44px}
+.nav button .ic{width:20px;text-align:center;font-size:16px}
+.nav button[aria-current="true"]{background:var(--pink-soft);color:var(--pink)}
+.nav .badge{margin-left:auto;background:var(--pink);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px}
+.aside-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+main{min-width:0;padding-block:24px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.head .t{flex:1;min-width:200px}
+.head h1{font-size:26px;font-weight:800;margin:0;letter-spacing:-.02em;text-wrap:balance}
+.head p{margin:2px 0 0;color:var(--muted);text-transform:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:9px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}
+.btn.main{background:var(--grad);border:0;color:var(--on);box-shadow:0 6px 18px rgba(200,50,160,.28)}
+.btn.wa{background:#25d366;border-color:#25d366;color:#05301a}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:13px;border-radius:10px}
+.icon{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:17px}
+
+/* плитки */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--shadow);min-width:0}
+.tile .l{font-size:12.5px;color:var(--muted);font-weight:600}
+.tile .v{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.tile .s{font-size:12.5px;color:var(--muted)}
+.tile.hero{background:var(--grad);border:0;color:#fff}
+.tile.hero .l,.tile.hero .s{color:rgba(255,255,255,.82)}
+.bar{height:6px;border-radius:6px;background:var(--card2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--grad);border-radius:6px}
+
+/* панели */
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-size:16px;margin:0;font-weight:800}
+.panel .ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.panel .ph h2{flex:1}
+.panel .sub{color:var(--muted);font-size:13px;margin:-8px 0 0}
+
+/* гайд */
+.guide{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;position:relative;box-shadow:var(--shadow)}
+.guide .gh{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.guide .gh h2{margin:0;font-size:16px;font-weight:800;flex:1}
+.step{background:var(--card2);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.step b{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--grad);color:#fff;font-size:13px}
+.step h3{margin:4px 0 0;font-size:14.5px}
+.step p{margin:0;color:var(--muted);font-size:13px}
+
+/* расписание */
+.sched{display:flex;flex-direction:column}
+.slot{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:stretch;padding:5px 0}
+.slot .tm{font-weight:700;color:var(--muted);font-size:13px;padding-top:12px}
+.free{border:1px dashed var(--line);border-radius:12px;min-height:40px;background:transparent;color:var(--muted);font-size:13px;text-align:left;padding:0 12px}
+.free:hover{border-color:var(--pink);color:var(--pink)}
+.appt{border-radius:14px;padding:11px 12px;background:var(--card2);border-left:4px solid var(--muted);display:flex;flex-direction:column;gap:8px;min-width:0}
+.appt.ok,.appt.done{border-left-color:var(--ok)} .appt.sent,.appt.silent{border-left-color:var(--warn)} .appt.cancel,.appt.noshow{border-left-color:var(--bad)} .appt.new{border-left-color:var(--pink)}
+.appt .r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.appt .n{font-weight:700;flex:1;min-width:120px;overflow-wrap:anywhere}
+.appt .n small{display:block;font-weight:500;color:var(--muted);font-size:12.5px}
+.appt .note{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.st{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;white-space:nowrap;background:var(--card)}
+.st.new{color:var(--pink)} .st.sent,.st.silent{color:var(--warn)} .st.ok,.st.done{color:var(--ok)} .st.cancel,.st.noshow{color:var(--bad)}
+.empty{color:var(--muted);text-align:center;padding:26px 12px;border:1px dashed var(--line);border-radius:16px;display:flex;flex-direction:column;gap:10px;align-items:center}
+
+/* неделя и месяц */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.dy{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:64px}
+.dy .w{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dy .d{font-weight:800;font-size:16px}
+.dy .c{font-size:11px;color:var(--pink);font-weight:700;min-height:14px}
+.dy[aria-pressed="true"]{background:var(--grad);border-color:transparent;color:#fff}
+.dy[aria-pressed="true"] .w,.dy[aria-pressed="true"] .c{color:rgba(255,255,255,.9)}
+.dy.today .d{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--pink)}
+.month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.month .wd{font-size:11px;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.05em;padding-bottom:2px}
+.month .dy{min-height:58px}
+.month .dy.out{opacity:.35}
+.mh{display:flex;align-items:center;gap:8px}
+.mh h2{flex:1;text-transform:capitalize}
+
+/* напоминания */
+.rem{display:flex;flex-direction:column;gap:8px}
+.ritem{display:flex;align-items:center;gap:10px;background:var(--card2);border-radius:14px;padding:10px 12px;flex-wrap:wrap}
+.ritem .tm{font-weight:800;color:var(--pink);min-width:46px}
+.ritem .n{flex:1;min-width:100px;font-weight:700;overflow-wrap:anywhere}
+.tip{background:var(--pink-soft);border-radius:14px;padding:12px 14px;font-size:13px}
+.tip b{color:var(--pink)}
+
+/* клиенты, тексты */
+.cl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.cc{background:var(--card2);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cc .top{display:flex;align-items:center;gap:10px}
+.av{width:40px;height:40px;border-radius:12px;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:4px 9px;border-radius:999px;background:var(--card);color:var(--muted)}
+.chip.ok{color:var(--ok)} .chip.bad{color:var(--bad)} .chip.warn{color:var(--warn)} .chip.pink{color:var(--pink)}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);font-weight:600}
+input,textarea,select{min-height:46px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);font-size:16px;width:100%;font-weight:500}
+textarea{resize:vertical}
+.preview{background:#0b141a;color:#e9edef;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.bubble{align-self:flex-end;background:#005c4b;border-radius:10px 10px 2px 10px;padding:8px 10px;max-width:85%;font-size:14px}
+
+/* лист формы, тост, мобильная навигация */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet .box{background:var(--card);border:1px solid var(--line);width:100%;max-width:520px;border-radius:22px;max-height:92vh;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slots{display:flex;flex-wrap:wrap;gap:6px}
+.slots button{min-height:38px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);font-size:13.5px}
+.slots button[aria-pressed="true"]{background:var(--grad);color:#fff;border-color:transparent}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:90%}
+.mnav{display:none}
+.fab{display:none}
+
+@media (max-width:1000px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:760px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  aside{display:none}
+  main{padding-block:14px 110px}
+  .head h1{font-size:22px}
+  .head .desk{display:none}
+  .guide{grid-template-columns:minmax(0,1fr)}
+  .tile .v{font-size:26px}
+  .mnav{display:block;position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--panel);border-top:1px solid var(--line);
+    padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+  .mnav .in{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+  .mnav button{min-height:52px;border:0;background:transparent;border-radius:12px;font-size:11px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .mnav button span{font-size:18px}
+  .mnav button[aria-current="true"]{color:var(--pink);background:var(--pink-soft)}
+  .fab{display:block;position:fixed;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(78px + env(safe-area-inset-bottom,0px));
+    height:54px;padding:0 20px;border-radius:27px;border:0;background:var(--grad);color:#fff;font-weight:800;font-size:15px;box-shadow:0 8px 24px rgba(200,50,160,.4);z-index:6}
+  .sheet{align-items:flex-end;padding:0}
+  .sheet .box{border-radius:22px 22px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="shell">
+  <aside>
+    <div class="logo"><i>✂</i>Мой журнал</div>
+    <div class="nav" id="nav"></div>
+    <div class="aside-foot">
+      <button class="btn main" type="button" id="addSide">+ Новая запись</button>
+      <button class="btn ghost" type="button" id="themeSide">Светлая тема</button>
+    </div>
+  </aside>
+  <main><div class="wrap" id="view"></div></main>
+</div>
+<button class="fab" id="fab" type="button">+ Запись</button>
+<nav class="mnav"><div class="in" id="mnav"></div></nav>
+<div id="sheetHost"></div>
+
+<script>
+/* ================= данные ================= */
+const DEF = { reminder:"Labvakar! Atgādinu par rītdienas pierakstiņu pulksten {laiks}.", thanks:"Paldies, uz tikšanos! ;)", cc:"371", from:"09:00", to:"20:00" };
+const ST = { new:"Записан", sent:"Напомнила", ok:"Подтвердил", silent:"Не ответил", cancel:"Не сможет", done:"Пришёл", noshow:"Не пришёл" };
+let appts=[], settings={...DEF}, db=null, mode="local";
+const LS="salon-journal-v1";
+const get=(k,d)=>{ try{ const v=localStorage.getItem(LS+"-"+k); return v==null?d:v; }catch(e){ return d; } };
+const put=(k,v)=>{ try{ localStorage.setItem(LS+"-"+k,v); }catch(e){} };
+function lsLoad(){ try{ const j=JSON.parse(localStorage.getItem(LS)||"{}"); appts=j.appts||[]; settings={...DEF,...(j.settings||{})}; }catch(e){} }
+function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({appts,settings})); }catch(e){} }
+async function saveAppt(a){
+  a.updatedAt=Date.now();
+  const i=appts.findIndex(x=>x.id===a.id); i<0?appts.push(a):(appts[i]=a);
+  lsSave(); render();
+  if(db){ try{ const {id,...r}=a; await db.collection("appts").doc(id).set(r); }catch(e){ toast("Нет связи с облаком. Запись сохранена на этом устройстве."); } }
+}
+async function delAppt(id){
+  appts=appts.filter(x=>x.id!==id); lsSave(); render();
+  if(db){ try{ await db.collection("appts").doc(id).delete(); }catch(e){} }
+}
+async function saveSettings(){ lsSave(); if(db){ try{ await db.doc("settings/main").set(settings); }catch(e){} } }
+
+/* ================= утилиты ================= */
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const D=s=>new Date(s+"T12:00:00");
+const addDays=(s,n)=>{ const d=D(s); d.setDate(d.getDate()+n); return iso(d); };
+const today=()=>iso(new Date());
+const tomorrow=()=>addDays(today(),1);
+const fmt=(s,o)=>D(s).toLocaleDateString("ru-RU",o);
+const long=s=>fmt(s,{weekday:"long",day:"numeric",month:"long"});
+const rel=s=>s===today()?"Сегодня":s===tomorrow()?"Завтра":s===addDays(today(),-1)?"Вчера":"";
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function waNum(p){ let d=(p||"").replace(/\D/g,""); if(!d) return ""; if(d.startsWith("00")) d=d.slice(2); if(d.length<=8) d=(settings.cc||"371")+d; return d; }
+const waLink=(p,t)=>`https://wa.me/${waNum(p)}?text=${encodeURIComponent(t)}`;
+const remText=a=>settings.reminder.replace(/\{laiks\}/g,a.time);
+const dayList=d=>appts.filter(a=>a.date===d).sort((a,b)=>a.time.localeCompare(b.time));
+const cnt=(l,...k)=>l.filter(a=>k.includes(a.status)).length;
+function el(t,at={},...kids){
+  const e=document.createElement(t);
+  for(const [k,v] of Object.entries(at)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e[k]=v; else if(v!==false&&v!=null) e.setAttribute(k,v); }
+  kids.flat().forEach(k=>{ if(k!=null&&k!==false) e.append(k.nodeType?k:String(k)); });
+  return e;
+}
+function toast(m){ const t=el("div",{class:"toast",role:"status"},m); document.body.append(t); setTimeout(()=>t.remove(),2600); }
+const initials=n=>(n||"?").trim().split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+
+/* ================= навигация ================= */
+const TABS=[
+  {k:"home",ic:"⌂",t:"Главная"},
+  {k:"cal",ic:"▦",t:"Календарь"},
+  {k:"remind",ic:"✉",t:"Напомнить"},
+  {k:"clients",ic:"☺",t:"Клиенты"},
+  {k:"settings",ic:"⚙",t:"Настройки"},
+];
+let tab=get("tab","home"); if(!TABS.some(t=>t.k===tab)) tab="home";
+let sel=today(), monthCur=today().slice(0,7);
+function setTab(t){ tab=t; put("tab",t); render(); window.scrollTo(0,0); }
+function drawNav(){
+  const pend=dayList(tomorrow()).filter(a=>a.status==="new").length;
+  const mk=(t,mob)=>{
+    const b=el("button",{type:"button","aria-current":String(tab===t.k),onclick:()=>setTab(t.k)},
+      mob?el("span",{},t.ic):el("span",{class:"ic"},t.ic), t.t,
+      (!mob&&t.k==="remind"&&pend)?el("span",{class:"badge num"},pend):null);
+    return b;
+  };
+  const n=document.getElementById("nav"); n.innerHTML=""; TABS.forEach(t=>n.append(mk(t,false)));
+  const m=document.getElementById("mnav"); m.innerHTML=""; TABS.forEach(t=>m.append(mk(t,true)));
+}
+
+/* ================= общие блоки ================= */
+function head(title,sub,...right){
+  return el("div",{class:"head"},el("div",{class:"t"},el("h1",{},title),sub?el("p",{},sub):null),...right);
+}
+function statusActions(a){
+  const acts=el("div",{class:"acts"});
+  if(a.date<=today() && !["done","noshow","cancel"].includes(a.status)){
+    acts.append(el("button",{class:"btn sm",type:"button",onclick:()=>saveAppt({...a,status:"done"})},"✓ Пришёл"),
+                el("button",{class:"btn sm",type:"button",onclick:()=>saveAppt({...a,status:"noshow"})},"Не пришёл"));
+  }
+  acts.append(el("button",{class:"btn sm ghost",type:"button",onclick:()=>openForm(a)},"Изменить"));
+  return acts;
+}
+function apptCard(a){
+  return el("div",{class:"appt "+a.status},
+    el("div",{class:"r"},
+      el("div",{class:"n"},a.name||"Без имени",a.phone?el("small",{},a.phone):null),
+      el("span",{class:"st "+a.status},ST[a.status]||"")),
+    a.note?el("div",{class:"note"},a.note):null,
+    statusActions(a));
+}
+function schedule(d,compact){
+  const list=dayList(d), box=el("div",{class:"sched"});
+  const [fh,fm]=settings.from.split(":").map(Number), [th,tm]=settings.to.split(":").map(Number);
+  const times=new Set(); for(let m=fh*60+fm;m<=th*60+tm;m+=30) times.add(`${pad(Math.floor(m/60))}:${pad(m%60)}`);
+  list.forEach(a=>times.add(a.time));
+  const nowT=`${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+  [...times].sort().forEach(t=>{
+    const here=list.filter(a=>a.time===t);
+    if(compact && !here.length) return;
+    if(!here.length && d===today() && t<nowT) return;
+    box.append(el("div",{class:"slot"},el("div",{class:"tm num"},t),
+      here.length?el("div",{style:"display:flex;flex-direction:column;gap:6px;min-width:0"},here.map(apptCard))
+                 :el("button",{class:"free",type:"button",onclick:()=>openForm({date:d,time:t})},"+ свободно")));
+  });
+  if(!box.children.length) return el("div",{class:"empty"},"На этот день записей нет.",el("button",{class:"btn main sm",type:"button",onclick:()=>openForm({date:d})},"+ Записать клиента"));
+  return box;
+}
+function weekStrip(){
+  const w=el("div",{class:"week"});
+  for(let i=0;i<7;i++){
+    const d=addDays(today(),i), n=dayList(d).length;
+    w.append(el("button",{class:"dy"+(d===today()?" today":""),type:"button","aria-pressed":String(d===sel),onclick:()=>{ sel=d; setTab("cal"); }},
+      el("span",{class:"w"},fmt(d,{weekday:"short"})), el("span",{class:"d num"},D(d).getDate()), el("span",{class:"c num"},n?`${n} кл.`:"")));
+  }
+  return w;
+}
+function guide(){
+  if(get("guide","1")==="0") return null;
+  return el("section",{class:"guide"},
+    el("div",{class:"gh"},el("h2",{},"Как пользоваться: 3 шага"),
+      appts.length?null:el("button",{class:"btn sm",type:"button",onclick:loadDemo},"Показать на примере"),
+      el("button",{class:"btn sm ghost",type:"button",onclick:()=>{ put("guide","0"); render(); }},"Понятно, скрыть")),
+    el("div",{class:"step"},el("b",{},"1"),el("h3",{},"Записали клиента"),el("p",{},"Нажмите «+ Запись» или свободное время в расписании. Хватит имени, телефона и времени.")),
+    el("div",{class:"step"},el("b",{},"2"),el("h3",{},"В 19:00 нажали «Напомнить»"),el("p",{},"У каждого клиента на завтра зелёная кнопка. Откроется WhatsApp с готовым текстом на латышском, остаётся «Отправить».")),
+    el("div",{class:"step"},el("b",{},"3"),el("h3",{},"Отметили ответ"),el("p",{},"«Подтвердил», «Не ответил» или «Не сможет». Утром на главной видно, кто придёт.")));
+}
+
+/* ================= экраны ================= */
+function vHome(v){
+  const td=dayList(today()), tm=dayList(tomorrow());
+  const okT=cnt(td,"ok","done"), sentTm=tm.filter(a=>a.status!=="new").length;
+  const h=new Date().getHours(), hi=h<12?"Доброе утро":h<18?"Добрый день":"Добрый вечер";
+  v.append(head(hi, long(today()), el("button",{class:"btn main desk",type:"button",onclick:()=>openForm({})},"+ Новая запись")));
+  const g=guide(); if(g) v.append(g);
+  v.append(el("div",{class:"tiles"},
+    el("div",{class:"tile hero"},el("span",{class:"l"},"Сегодня клиентов"),el("span",{class:"v num"},td.length),
+      el("span",{class:"s"},td.length?`первый в ${td[0].time}, последний в ${td[td.length-1].time}`:"свободный день")),
+    el("div",{class:"tile"},el("span",{class:"l"},"Подтвердили на сегодня"),el("span",{class:"v num",style:"color:var(--ok)"},okT),
+      el("span",{class:"s num"},`молчат ${cnt(td,"sent","silent","new")} · отмена ${cnt(td,"cancel")}`)),
+    el("div",{class:"tile"},el("span",{class:"l"},"Напоминания на завтра"),el("span",{class:"v num"},`${sentTm}/${tm.length}`),
+      el("div",{class:"bar"},el("i",{style:`width:${tm.length?Math.round(sentTm/tm.length*100):0}%`}))),
+    el("div",{class:"tile"},el("span",{class:"l"},"Клиентов в базе"),el("span",{class:"v num"},clientsMap().length),
+      el("span",{class:"s num"},`записей на 7 дней: ${appts.filter(a=>a.date>=today()&&a.date<=addDays(today(),6)).length}`))));
+  const left=el("div",{class:"col"},
+    el("section",{class:"panel"},el("div",{class:"ph"},el("h2",{},"Расписание на сегодня"),el("button",{class:"btn sm ghost",type:"button",onclick:()=>{ sel=today(); setTab("cal"); }},"Весь день →")),
+      schedule(today(),true)));
+  const remBox=el("section",{class:"panel"},
+    el("div",{class:"ph"},el("h2",{},"Напомнить на завтра"),el("span",{class:"st new num"},`${tm.length-sentTm} не отправлено`)),
+    el("p",{class:"sub"},long(tomorrow())));
+  if(!tm.length) remBox.append(el("div",{class:"empty"},"На завтра пока никого."));
+  else{
+    const r=el("div",{class:"rem"});
+    tm.slice(0,5).forEach(a=>r.append(el("div",{class:"ritem"},el("span",{class:"tm num"},a.time),el("span",{class:"n"},a.name||"Без имени"),el("span",{class:"st "+a.status},ST[a.status]))));
+    if(tm.length>5) r.append(el("div",{class:"sub",style:"margin:0"},`и ещё ${tm.length-5}`));
+    remBox.append(r, el("button",{class:"btn main",type:"button",onclick:()=>setTab("remind")},"Открыть напоминания"));
+  }
+  const right=el("div",{class:"col"}, remBox,
+    el("section",{class:"panel"},el("div",{class:"ph"},el("h2",{},"Ближайшие 7 дней"),el("button",{class:"btn sm ghost",type:"button",onclick:()=>setTab("cal")},"Календарь →")),weekStrip()));
+  v.append(el("div",{class:"grid"},left,right));
+}
+
+function vCal(v){
+  v.append(head("Календарь", "Выберите день, чтобы увидеть расписание и записать клиента", el("button",{class:"btn main desk",type:"button",onclick:()=>openForm({date:sel})},"+ Новая запись")));
+  const [y,m]=monthCur.split("-").map(Number);
+  const first=new Date(y,m-1,1), startOff=(first.getDay()+6)%7;
+  const grid=el("div",{class:"month"});
+  ["пн","вт","ср","чт","пт","сб","вс"].forEach(w=>grid.append(el("div",{class:"wd"},w)));
+  for(let i=0;i<42;i++){
+    const d=iso(new Date(y,m-1,1-startOff+i));
+    if(i>=35 && d.slice(0,7)!==monthCur) break;
+    const n=dayList(d).length;
+    grid.append(el("button",{class:"dy"+(d.slice(0,7)!==monthCur?" out":"")+(d===today()?" today":""),type:"button","aria-pressed":String(d===sel),
+      onclick:()=>{ sel=d; monthCur=d.slice(0,7); render(); }},
+      el("span",{class:"d num"},D(d).getDate()), el("span",{class:"c num"},n?`${n} кл.`:"")));
+  }
+  const shiftM=k=>{ const dd=new Date(y,m-1+k,1); monthCur=`${dd.getFullYear()}-${pad(dd.getMonth()+1)}`; render(); };
+  const mon=el("section",{class:"panel"},
+    el("div",{class:"mh"},el("button",{class:"icon",type:"button","aria-label":"Прошлый месяц",onclick:()=>shiftM(-1)},"‹"),
+      el("h2",{},first.toLocaleDateString("ru-RU",{month:"long",year:"numeric"})),
+      el("button",{class:"btn sm ghost",type:"button",onclick:()=>{ sel=today(); monthCur=today().slice(0,7); render(); }},"Сегодня"),
+      el("button",{class:"icon",type:"button","aria-label":"Следующий месяц",onclick:()=>shiftM(1)},"›")), grid);
+  const l=dayList(sel);
+  const day=el("section",{class:"panel"},
+    el("div",{class:"ph"},el("h2",{},(rel(sel)?rel(sel)+", ":"")+long(sel)),
+      el("button",{class:"icon",type:"button","aria-label":"Предыдущий день",onclick:()=>{ sel=addDays(sel,-1); monthCur=sel.slice(0,7); render(); }},"‹"),
+      el("button",{class:"icon",type:"button","aria-label":"Следующий день",onclick:()=>{ sel=addDays(sel,1); monthCur=sel.slice(0,7); render(); }},"›")),
+    l.length?el("div",{class:"chips"},el("span",{class:"chip pink num"},`Клиентов: ${l.length}`),el("span",{class:"chip ok num"},`Подтвердили: ${cnt(l,"ok","done")}`),
+      el("span",{class:"chip warn num"},`Молчат: ${cnt(l,"sent","silent")}`),el("span",{class:"chip bad num"},`Отмена: ${cnt(l,"cancel")}`)):null,
+    schedule(sel,false));
+  v.append(el("div",{class:"grid"},el("div",{class:"col"},day),el("div",{class:"col"},mon)));
+}
+
+function vRemind(v){
+  const d=tomorrow(), l=dayList(d), sent=l.filter(a=>a.status!=="new").length;
+  v.append(head("Напоминания на завтра", long(d)));
+  v.append(el("div",{class:"tiles"},
+    el("div",{class:"tile hero"},el("span",{class:"l"},"Клиентов завтра"),el("span",{class:"v num"},l.length),el("div",{class:"bar",style:"background:rgba(255,255,255,.25)"},el("i",{style:`width:${l.length?sent/l.length*100:0}%;background:#fff`}))),
+    el("div",{class:"tile"},el("span",{class:"l"},"Отправлено"),el("span",{class:"v num"},sent)),
+    el("div",{class:"tile"},el("span",{class:"l"},"Подтвердили"),el("span",{class:"v num",style:"color:var(--ok)"},cnt(l,"ok"))),
+    el("div",{class:"tile"},el("span",{class:"l"},"Не ответили / отмена"),el("span",{class:"v num"},`${cnt(l,"silent")} / ${cnt(l,"cancel")}`))));
+  const p=el("section",{class:"panel"},
+    el("div",{class:"tip"},el("b",{},"Как отправить: "),"нажмите зелёную кнопку. Откроется WhatsApp с готовым текстом, нажмите «Отправить» и вернитесь сюда. Когда клиент ответит, отметьте ответ кнопкой."));
+  if(!l.length) p.append(el("div",{class:"empty"},"На завтра записей нет.",el("button",{class:"btn main sm",type:"button",onclick:()=>openForm({date:d})},"+ Записать на завтра")));
+  l.forEach(a=>{
+    const send=el("a",{class:"btn wa",href:a.phone?waLink(a.phone,remText(a)):"#",target:"_blank",rel:"noopener"},a.status==="new"?"Напомнить в WhatsApp":"Написать ещё раз");
+    send.addEventListener("click",e=>{ if(!a.phone){ e.preventDefault(); toast("У клиента нет телефона. Нажмите «Изменить» и впишите номер."); return; } if(a.status==="new") saveAppt({...a,status:"sent"}); });
+    const acts=el("div",{class:"acts"},send);
+    if(a.status!=="new"){
+      const ty=el("a",{class:"btn sm",href:waLink(a.phone,settings.thanks),target:"_blank",rel:"noopener"},"✓ Подтвердил");
+      ty.addEventListener("click",()=>saveAppt({...a,status:"ok"}));
+      acts.append(ty,
+        el("button",{class:"btn sm",type:"button",onclick:()=>saveAppt({...a,status:"silent"})},"Не ответил"),
+        el("button",{class:"btn sm",type:"button",onclick:()=>saveAppt({...a,status:"cancel"})},"Не сможет"));
+    }
+    acts.append(el("button",{class:"btn sm ghost",type:"button",onclick:()=>openForm(a)},"Изменить"));
+    p.append(el("div",{class:"appt "+a.status},
+      el("div",{class:"r"},el("span",{style:"font-weight:800;color:var(--pink);min-width:48px",class:"num"},a.time),
+        el("div",{class:"n"},a.name||"Без имени",a.phone?el("small",{},a.phone):el("small",{style:"color:var(--bad)"},"нет телефона")),
+        el("span",{class:"st "+a.status},ST[a.status])), acts));
+  });
+  if(l.some(a=>a.status==="ok")) p.append(el("p",{class:"sub",style:"margin:0"},"Кнопка «✓ Подтвердил» сразу открывает ответ «"+settings.thanks+"»."));
+  v.append(p);
+}
+
+function clientsMap(){
+  const m=new Map();
+  appts.forEach(a=>{ const k=waNum(a.phone)||("n:"+(a.name||"").toLowerCase()); if(!m.has(k)) m.set(k,{name:a.name,phone:a.phone,list:[]}); const c=m.get(k); c.list.push(a); if(a.name) c.name=a.name; if(a.phone) c.phone=a.phone; });
+  return [...m.values()];
+}
+let q="";
+function vClients(v){
+  const all=clientsMap();
+  v.append(head("Клиенты", `${all.length} в базе. История визитов собирается сама из записей.`));
+  const inp=el("input",{type:"search",id:"cq",placeholder:"Поиск по имени или телефону",value:q});
+  const box=el("div",{class:"cl"});
+  inp.oninput=()=>{ q=inp.value; draw(); };
+  v.append(el("section",{class:"panel"},inp,box));
+  function draw(){
+    box.innerHTML="";
+    const s=q.trim().toLowerCase();
+    const cs=all.filter(c=>!s||(c.name||"").toLowerCase().includes(s)||(c.phone||"").replace(/\s/g,"").includes(s.replace(/\s/g,""))).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    if(!cs.length){ box.append(el("div",{class:"empty",style:"grid-column:1/-1"},all.length?"Никого не нашли.":"Клиенты появятся здесь после первых записей.")); return; }
+    cs.forEach(c=>{
+      const past=c.list.filter(a=>a.date<=today()).sort((a,b)=>b.date.localeCompare(a.date));
+      const next=c.list.filter(a=>a.date>today()).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      box.append(el("div",{class:"cc"},
+        el("div",{class:"top"},el("div",{class:"av"},initials(c.name)),el("div",{style:"min-width:0"},el("div",{style:"font-weight:700;overflow-wrap:anywhere"},c.name||"Без имени"),el("div",{class:"sub",style:"margin:0;font-size:13px;color:var(--muted)"},c.phone||"нет телефона"))),
+        el("div",{class:"chips"},
+          el("span",{class:"chip ok num"},`Визитов: ${cnt(c.list,"done")}`),
+          cnt(c.list,"noshow")?el("span",{class:"chip bad num"},`Не пришёл: ${cnt(c.list,"noshow")}`):null,
+          cnt(c.list,"cancel")?el("span",{class:"chip warn num"},`Отмен: ${cnt(c.list,"cancel")}`):null,
+          past[0]?el("span",{class:"chip num"},`Был: ${fmt(past[0].date,{day:"numeric",month:"short"})}`):null,
+          next?el("span",{class:"chip pink num"},`Придёт: ${fmt(next.date,{day:"numeric",month:"short"})} ${next.time}`):null),
+        el("div",{class:"acts"},
+          el("button",{class:"btn sm main",type:"button",onclick:()=>openForm({name:c.name,phone:c.phone})},"Записать снова"),
+          c.phone?el("a",{class:"btn sm wa",href:`https://wa.me/${waNum(c.phone)}`,target:"_blank",rel:"noopener"},"WhatsApp"):null)));
+    });
+  }
+  draw();
+}
+
+function vSettings(v){
+  v.append(head("Настройки","Тексты сообщений, рабочие часы и тема"));
+  const r=el("textarea",{id:"sRem",rows:"3"}); r.value=settings.reminder;
+  const t=el("textarea",{id:"sThx",rows:"2"}); t.value=settings.thanks;
+  const cc=el("input",{id:"sCc",inputmode:"numeric",value:settings.cc});
+  const fr=el("input",{id:"sFrom",type:"time",value:settings.from}), to=el("input",{id:"sTo",type:"time",value:settings.to});
+  const pv=el("div",{class:"preview"},el("div",{class:"bubble"},remText({time:"15:00"})),el("div",{class:"bubble",style:"opacity:.75"},settings.thanks));
+  const upd=()=>{ pv.innerHTML=""; pv.append(el("div",{class:"bubble"},(r.value||DEF.reminder).replace(/\{laiks\}/g,"15:00")),el("div",{class:"bubble",style:"opacity:.75"},t.value||DEF.thanks)); };
+  r.oninput=upd; t.oninput=upd;
+  v.append(el("div",{class:"grid"},
+    el("section",{class:"panel"},el("h2",{},"Тексты WhatsApp"),el("p",{class:"sub"},"{laiks} заменяется на время записи."),
+      el("label",{},"Напоминание накануне",r), el("label",{},"Ответ после подтверждения",t),
+      el("div",{class:"g2"},el("label",{},"Начало дня",fr),el("label",{},"Конец дня",to)),
+      el("label",{},"Код страны для номеров без кода",cc),
+      el("div",{class:"acts"},
+        el("button",{class:"btn main",type:"button",onclick:()=>{ settings={...settings,reminder:r.value.trim()||DEF.reminder,thanks:t.value.trim()||DEF.thanks,cc:cc.value.replace(/\D/g,"")||"371",from:fr.value||DEF.from,to:to.value||DEF.to}; saveSettings(); toast("Сохранено"); }},"Сохранить"),
+        el("button",{class:"btn ghost",type:"button",onclick:()=>{ settings={...DEF}; saveSettings(); render(); toast("Вернула исходные тексты"); }},"Вернуть как было"))),
+    el("div",{class:"col"},
+      el("section",{class:"panel"},el("h2",{},"Так увидит клиент"),pv),
+      el("section",{class:"panel"},el("h2",{},"Вид и помощь"),
+        el("div",{class:"acts"},
+          el("button",{class:"btn",type:"button",onclick:toggleTheme},theme==="dark"?"Включить светлую тему":"Включить тёмную тему"),
+          el("button",{class:"btn",type:"button",onclick:()=>{ put("guide","1"); setTab("home"); }},"Показать гайд снова"),
+          appts.some(a=>a.demo)?el("button",{class:"btn ghost",type:"button",onclick:clearDemo},"Удалить примеры"):null),
+        el("p",{class:"sub",style:"margin:0"}, mode==="cloud"?"Записи хранятся в облаке и одинаковы на всех устройствах.":"Записи хранятся в этом телефоне, в этом браузере. Раз в неделю сохраняйте копию.")),
+      el("section",{class:"panel"},el("h2",{},"Копия записей"),
+        el("p",{class:"sub"},`Сейчас записей: ${appts.length}. Копия нужна, если смените телефон или почистите браузер.`),
+        el("div",{class:"acts"},
+          el("button",{class:"btn",type:"button",onclick:exportData},"Сохранить копию"),
+          el("button",{class:"btn ghost",type:"button",onclick:()=>document.getElementById("impFile").click()},"Загрузить копию")),
+        el("input",{type:"file",id:"impFile",accept:".json,application/json",hidden:true,onchange:importData})),
+      el("section",{class:"panel"},el("h2",{},"Иконка на экране телефона"),
+        el("p",{class:"sub",style:"margin:0"},"iPhone (Safari): кнопка «Поделиться» → «На экран Домой». Android (Chrome): меню ⋮ → «Добавить на главный экран». Журнал будет открываться как приложение.")))));
+}
+function exportData(){
+  try{
+    const blob=new Blob([JSON.stringify({appts,settings,saved:new Date().toISOString()},null,1)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`zhurnal-${today()}.json`;
+    document.body.append(a); a.click(); a.remove(); toast("Копия сохранена в Загрузки");
+  }catch(e){ toast("Не получилось сохранить копию"); }
+}
+function importData(e){
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const j=JSON.parse(r.result); if(!Array.isArray(j.appts)) throw 0;
+      const ids=new Set(appts.map(a=>a.id)); j.appts.forEach(a=>{ if(!ids.has(a.id)) appts.push(a); });
+      if(j.settings) settings={...DEF,...j.settings}; lsSave(); render(); toast(`Загружено. Всего записей: ${appts.length}`);
+    }catch(err){ toast("Это не файл копии журнала"); } };
+  r.readAsText(f);
+}
+
+/* ================= форма ================= */
+function openForm(a){
+  const isNew=!a||!a.id;
+  a={id:uid(),date:sel||today(),time:"",name:"",phone:"",note:"",status:"new",...(a||{})};
+  const host=document.getElementById("sheetHost"), close=()=>{ host.innerHTML=""; };
+  const date=el("input",{type:"date",id:"fDate",value:a.date});
+  const time=el("input",{type:"time",id:"fTime",value:a.time,step:"900"});
+  const name=el("input",{id:"fName",value:a.name,placeholder:"Имя клиента",list:"names",autocomplete:"off"});
+  const phone=el("input",{id:"fPhone",type:"tel",value:a.phone,placeholder:"20 000 000"});
+  const note=el("textarea",{id:"fNote",rows:"2",placeholder:"Например: стрижка + борода"}); note.value=a.note||"";
+  const dl=el("datalist",{id:"names"},clientsMap().map(c=>el("option",{value:c.name||""},c.phone||"")));
+  name.oninput=()=>{ const c=clientsMap().find(c=>c.name===name.value); if(c&&!phone.value) phone.value=c.phone||""; };
+  const slots=el("div",{class:"slots"});
+  const drawS=()=>{
+    slots.innerHTML="";
+    const busy=new Set(dayList(date.value).filter(x=>x.id!==a.id).map(x=>x.time));
+    const [fh,fm]=settings.from.split(":").map(Number),[th,tm]=settings.to.split(":").map(Number);
+    for(let m=fh*60+fm;m<=th*60+tm;m+=30){ const s=`${pad(Math.floor(m/60))}:${pad(m%60)}`; if(busy.has(s)) continue;
+      const b=el("button",{type:"button","aria-pressed":String(time.value===s)},s); b.onclick=()=>{ time.value=s; drawS(); }; slots.append(b); }
+  };
+  date.onchange=drawS; time.oninput=drawS; drawS();
+  let delArmed=false;
+  const delBtn=!isNew?el("button",{class:"btn ghost",type:"button",onclick:()=>{ if(delArmed){ delAppt(a.id); close(); toast("Запись удалена"); } else { delArmed=true; delBtn.textContent="Точно удалить?"; delBtn.style.color="var(--bad)"; } }},"Удалить"):null;
+  const box=el("form",{class:"box"},
+    el("div",{class:"ph",style:"display:flex;align-items:center;gap:10px"},el("h2",{style:"margin:0;flex:1;font-size:18px"},isNew?"Новая запись":"Изменить запись"),el("button",{class:"icon",type:"button","aria-label":"Закрыть",onclick:close},"✕")),
+    el("div",{class:"g2"},el("label",{},"Дата",date),el("label",{},"Время",time)),
+    el("label",{},"Свободное время",slots),
+    el("label",{},"Имя",name),dl,
+    el("label",{},"Телефон (WhatsApp)",phone),
+    el("label",{},"Заметка",note),
+    el("div",{class:"acts"},el("button",{class:"btn main",type:"submit"},"Сохранить"),delBtn));
+  box.onsubmit=e=>{
+    e.preventDefault();
+    if(!time.value){ toast("Выберите время"); return; }
+    if(!name.value.trim()&&!phone.value.trim()){ toast("Впишите имя или телефон"); return; }
+    saveAppt({...a,date:date.value,time:time.value,name:name.value.trim(),phone:phone.value.trim(),note:note.value.trim()});
+    sel=date.value; monthCur=sel.slice(0,7); close(); toast("Клиент записан");
+  };
+  const sh=el("div",{class:"sheet",onclick:e=>{ if(e.target===sh) close(); }},box);
+  host.innerHTML=""; host.append(sh); setTimeout(()=>(a.name?time:name).focus(),50);
+}
+
+/* ================= пример ================= */
+function loadDemo(){
+  const t=today(), tm=tomorrow();
+  const demo=[
+    [t,"10:00","Anna (пример)","20 000 001","стрижка","done"],[t,"11:30","Jānis (пример)","20 000 002","стрижка + борода","ok"],
+    [t,"14:00","Laura (пример)","20 000 003","","ok"],[t,"16:30","Mārtiņš (пример)","20 000 004","","silent"],
+    [tm,"09:30","Ilze (пример)","20 000 005","окрашивание","new"],[tm,"12:00","Anna (пример)","20 000 001","","new"],
+    [tm,"15:00","Edgars (пример)","20 000 006","","new"],[addDays(t,2),"13:00","Laura (пример)","20 000 003","","new"],
+  ];
+  demo.forEach(([date,time,name,phone,note,status])=>saveAppt({id:uid(),date,time,name,phone,note,status,demo:true}));
+  toast("Добавила примеры. Удалить их можно в Настройках.");
+}
+function clearDemo(){ appts.filter(a=>a.demo).forEach(a=>delAppt(a.id)); toast("Примеры удалены"); }
+
+/* ================= тема ================= */
+let theme=get("theme","dark");
+function applyTheme(){ document.documentElement.setAttribute("data-theme",theme); document.getElementById("themeSide").textContent=theme==="dark"?"Светлая тема":"Тёмная тема"; }
+function toggleTheme(){ theme=theme==="dark"?"light":"dark"; put("theme",theme); applyTheme(); render(); }
+
+/* ================= рендер ================= */
+function render(){
+  drawNav();
+  const v=document.getElementById("view"); v.innerHTML="";
+  ({home:vHome,cal:vCal,remind:vRemind,clients:vClients,settings:vSettings})[tab](v);
+  document.getElementById("fab").hidden = tab==="settings";
+}
+document.getElementById("addSide").onclick=()=>openForm({});
+document.getElementById("fab").onclick=()=>openForm({date: tab==="remind"?tomorrow():(tab==="cal"?sel:today())});
+document.getElementById("themeSide").onclick=toggleTheme;
+applyTheme(); lsLoad(); render();
+
+(async()=>{
+  try{ db=await window.claude?.use?.("db"); }catch(e){ db=null; }
+  if(!db) return;
+  mode="cloud";
+  db.collection("appts").onSnapshot(snap=>{
+    const cloud=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const ids=new Set(cloud.map(x=>x.id));
+    appts.filter(a=>!ids.has(a.id)).forEach(a=>{ const {id,...r}=a; db.collection("appts").doc(id).set(r).catch(()=>{}); cloud.push(a); });
+    appts=cloud; lsSave(); if(!document.querySelector(".sheet")) render();
+  },()=>{ mode="local"; });
+  db.doc("settings/main").onSnapshot(s=>{ if(s.exists){ settings={...DEF,...s.data()}; lsSave(); if(tab!=="settings") render(); } },()=>{});
+})();
+</script>
+
+</body></html>
